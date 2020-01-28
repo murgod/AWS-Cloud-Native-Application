@@ -1,0 +1,115 @@
+---
+
+- name: Something1
+  hosts: localhost
+  vars_files:
+    - external_vars.yml  #connection: local
+  gather_facts: False
+  vars: 
+    key_name: "{{ key }}"
+    region: us-east-1
+    image: ami-9887c6e7
+    id: ec2sec
+    instance_type: t2.micro
+    vpc_subnet_id: "{{subnet_id}}"
+    security_group: "{{ security_grp }}"  
+    user: centos
+    #id: sampleApp
+    #sec_group: "{{ id }}-sec"
+
+  tasks:
+    #- name: Get the instance facts
+    #  ec2_instance_facts:
+    #    aws_access_key: "{{ec2_access_key}}"
+    #    aws_secret_key: "{{ec2_secret_key}}"
+    #    region: "{{ region }}"
+    #  register: result
+
+    #- name: Upload public key to AWS
+    #  ec2_key:
+    #    name: robust
+    #    key_material: "{{ lookup('file', '~/.ssh/my_aws.pub') }}"
+    #    region: "{{ region }}"
+    #    aws_access_key: "{{ec2_access_key}}"
+    #    aws_secret_key: "{{ec2_secret_key}}"
+   
+    - name: Create security group
+      ec2_group: 
+        name: "{{ security_grp }}"
+        description: "Sec group for app {{ id }}"
+        region: "{{ region }}"
+        aws_access_key: "{{ec2_access_key}}"
+        aws_secret_key: "{{ec2_secret_key}}"
+        rules:
+          - proto: tcp
+            ports:
+              - 22
+            cidr_ip: 0.0.0.0/0
+            rule_desc: allow all on ssh port
+      register: result_sec_group
+
+    - name: Provision an EC2 Instance
+      ec2:
+        aws_access_key: "{{ ec2_access_key }}"
+        aws_secret_key: "{{ ec2_secret_key }}"
+        #id: "{{ id }}"
+        key_name: "{{ key_name }}"
+        instance_type: "{{ instance_type }}"
+        group_id: "{{ result_sec_group.group_id }}"
+        image: "{{ image }}"
+        region: "{{ region }}"
+        wait: yes
+        vpc_subnet_id: "{{ vpc_subnet_id  }}"
+        group: "{{ security_group }}"
+        instance_tags:
+          app: web
+        assign_public_ip: yes
+        count_tag: app
+        exact_count: 1
+      register: ip_from_ec2
+    
+    - name: Wait for SSH to come up
+      wait_for:
+        host: "{{ ip_from_ec2.instances | map(attribute='public_dns_name') | first }}"
+        port: 22
+        delay: 60
+        timeout: 320
+        state: started
+  
+    - name: Add the instance to the inventory file
+      add_host:
+        name: "{{ ip_from_ec2.instances | map(attribute='public_dns_name') | first }}"
+        groups: just_added
+        #ansible_user: centos
+        ansible_ssh_user: centos
+        ansible_ssh_host: "{{ ip_from_ec2.instances | map(attribute='public_dns_name') | first }}"
+        #ansible_ssh_private_key_file: robust.pem
+        ansible_ssh_private_key_file: "{{ keyfile }}"
+    
+    - name: Install Update
+      become: yes
+      remote_user: centos
+      yum: 
+        name: '*'
+        state: latest
+      delegate_to : "{{ ip_from_ec2.instances | map(attribute='public_dns_name') | first }}"
+
+    - name: Install Tomcat and Python3
+      become: yes
+      remote_user: centos
+      yum:
+        name: 
+          - httpd
+          - epel-release
+          - python3
+        state: present
+      #update_cache: true
+      delegate_to: "{{ ip_from_ec2.instances | map(attribute='public_dns_name') | first }}"
+
+    - name: remove Python 2 
+      become: yes
+      remote_user: centos
+      file:
+        path: /usr/bin/python
+        state: absent
+      delegate_to: "{{ ip_from_ec2.instances | map(attribute='public_dns_name') | first }}" 

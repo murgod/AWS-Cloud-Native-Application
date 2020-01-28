@@ -1,0 +1,33 @@
+---
+- name: Terminating EC2
+  hosts: localhost
+  vars_files:
+    - external_vars.yml  #connection: local
+
+  tasks:
+  - name: Get the instance facts
+    ec2_instance_facts:
+      aws_access_key: "{{ec2_access_key}}"
+      aws_secret_key: "{{ec2_secret_key}}"
+      region: "{{ region }}"
+      filters:
+        "tag:app" : "web"  
+    register: result
+  - name: s
+    debug:
+      msg: "{{ result }}"
+    
+  - name: Something
+    ec2: 
+      instance_ids: "{{ result.instances | map(attribute='instance_id') | first }}"
+      instance_tags:
+        app : web
+      aws_access_key: "{{ec2_access_key}}"
+      aws_secret_key: "{{ec2_secret_key}}"
+      key_name: prov_ec2
+      region: us-east-1
+      state: absent
+      wait: true
+      #vpc_subnet_id: subnet-0214bb8dcf2deb8d6
+      vpc_subnet_id: "{{ subnet_id }}"
+      #assign_public_id: yes
