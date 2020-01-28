@@ -1,0 +1,19 @@
+apiVersion: v1
+appVersion: 19.2.3
+description: A Helm chart for Kubernetes
+home: https://www.cockroachlabs.com
+version: 0.2.1
+icon: https://raw.githubusercontent.com/cockroachdb/cockroach/master/docs/media/cockroach_db.png
+maintainers:
+- email: murgod.a@husky.neu.edu
+  name: akshay-murgod
+- email: balani.a@husky.neu.edu
+  name: akash-balani
+- email: pankajsahani@husky.neu.edu
+  name: pankaj
+- email: sunil.yadav@husky.neu.edu
+  name: sunil-yadav
+name: csye7374-operator
+fullname: csye7374-operator
+sources:
+- https://github.com/cockroachdb/cockroach
