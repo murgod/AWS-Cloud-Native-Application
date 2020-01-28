@@ -1,0 +1,10 @@
+apiVersion: app.example.com/v1alpha1
+kind: Folder
+metadata:
+  name: app.example.com
+  namespace: default
+spec:
+  # Add fields here
+  username: akash-demo14
+  usersecret:
+    name: aws-cred-secret
