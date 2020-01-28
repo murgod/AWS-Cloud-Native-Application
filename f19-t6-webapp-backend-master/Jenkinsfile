@@ -1,0 +1,77 @@
+pipeline {
+
+  environment {
+    registry = ""
+    registryCredential = 'hello-kb'
+    dockerImage = ''
+  }
+
+  agent any
+
+  stages {
+
+    
+    stage('Building Docker images'){
+   
+    when {
+     
+          anyOf {
+            branch 'master';
+            branch 'assignment7'
+          }
+       
+      }
+      steps {
+       script {
+      
+        sh "cat Deployment.yaml"
+        sh "cat Deployment_live.yaml"
+         
+        sleep(time:60,unit:"SECONDS") 
+       }
+      }
+    }
+
+
+    stage('push to Docker registry'){
+     when {
+       
+          anyOf {
+            branch 'master';
+            branch 'assignment7'
+          }
+       
+     }
+      
+     steps {
+       script {
+         sh "chmod +x changeImgTag.sh"
+         sh "./changeImgTag.sh"
+         sh "cat Deployment_live.yaml"
+         sleep(time:60, unit:"SECONDS")
+       }
+     }
+    }
+
+    stage('Deploy App') {
+     when {
+       
+          anyOf {
+            branch 'master';
+            branch 'assignment7'
+          }
+       
+     }
+      steps {
+        script {
+             kubernetesDeploy(configs: "Deployment_live.yaml", kubeconfigId: "mykubeconfig")
+        }
+      }
+    }
+
+  }
+
+}
+
+
+

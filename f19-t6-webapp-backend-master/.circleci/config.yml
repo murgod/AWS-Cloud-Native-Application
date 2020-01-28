@@ -1,0 +1,40 @@
+version: 2.1
+
+executors:
+  docker-publisher:
+    environment:
+      IMAGE_NAME: f19-t6-webapp-backend
+    docker:
+      - image: circleci/buildpack-deps:stretch
+jobs:
+  build:
+    executor: docker-publisher
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+           name: Setup VirtualEnv
+           command: |
+              echo 'export TAG=0.1.${CIRCLE_BUILD_NUM}' >> $BASH_ENV
+              echo 'export IMAGE_NAME=${DOCKERHUB_USERNAME}/f19-t6-webapp-backend' >> $BASH_ENV    
+      - run:
+          name: Build Docker image
+          command: |
+            cd webapp && docker build -t $IMAGE_NAME:$CIRCLE_SHA1 .
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push $IMAGE_NAME:$CIRCLE_SHA1
+workflows:
+  version: 2
+  main:
+   jobs:
+     - build:
+          filters:
+           branches:
+              only:
+              - master
+              - assignment5
+              - assignment6
+              - assignment7
